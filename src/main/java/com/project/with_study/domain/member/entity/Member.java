@@ -33,7 +33,7 @@ public class Member extends BaseEntity {
     private String nickname;
 
     @Comment("비밀번호")
-    @Column(length = 24, nullable = false)
+    @Column(length = 60, nullable = false)
     private String password;
 
     @Comment("이메일")
