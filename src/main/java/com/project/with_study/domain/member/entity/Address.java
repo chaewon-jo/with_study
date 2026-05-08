@@ -1,10 +1,12 @@
 package com.project.with_study.domain.member.entity;
 
+import jakarta.persistence.Embeddable;
 import lombok.*;
 import org.hibernate.annotations.Comment;
 
 @Builder
 @Getter
+@Embeddable
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Address {
