@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @MappedSuperclass
@@ -28,7 +29,11 @@ public abstract class BaseEntity {
     private LocalDateTime deletedAt;
 
     public void delete() {
+        if (this.isDeleted) {
+            return;
+        }
+
         this.isDeleted = true;
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }
