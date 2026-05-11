@@ -1,6 +1,7 @@
 package com.project.with_study.global.exception;
 
 import com.project.with_study.global.exception.errorcode.ErrorCode;
+import com.project.with_study.global.response.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;

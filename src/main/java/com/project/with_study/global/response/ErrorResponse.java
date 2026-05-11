@@ -1,4 +1,4 @@
-package com.project.with_study.global.exception;
+package com.project.with_study.global.response;
 
 import com.project.with_study.global.exception.errorcode.ErrorCode;
 import lombok.Builder;
