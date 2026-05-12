@@ -12,6 +12,8 @@ import java.util.List;
 @Getter
 @Builder
 public class ErrorResponse {
+
+    private final boolean success = false;
     private HttpStatus status;
     private String code;
     private String message;
@@ -63,6 +65,5 @@ public class ErrorResponse {
     public static ErrorResponse of(ErrorCode errorCode, List<FieldError> errors, String message) {
         return new ErrorResponse(errorCode, errors, message);
     }
-
 
 }
