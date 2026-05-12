@@ -1,9 +1,11 @@
 package com.project.with_study.global.response;
 
+import lombok.Getter;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
 
+@Getter
 public class MultiApiResponse<T> extends BaseApiResponse {
     private List<T> data;
     private PageInfo pageInfo;

@@ -7,13 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.messaging.handler.annotation.support.MethodArgumentTypeMismatchException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import static com.project.with_study.global.exception.errorcode.CommonErrorCode.*;
@@ -139,7 +139,7 @@ public class GlobalExceptionHandler {
      * [A001] 인증 실패 에러 (401)
      */
     @ExceptionHandler(AuthenticationException.class)
-    protected ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(AuthenticationException e) {
+    protected ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException e) {
         log.error("handle AuthenticationException", e);
 
         ErrorCode errorCode = UNAUTHORIZED;

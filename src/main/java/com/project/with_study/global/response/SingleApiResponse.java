@@ -1,5 +1,8 @@
 package com.project.with_study.global.response;
 
+import lombok.Getter;
+
+@Getter
 public class SingleApiResponse<T> extends BaseApiResponse{
     private T data;
 
