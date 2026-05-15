@@ -1,6 +1,6 @@
 package com.project.with_study.domain.member.entity;
 
-import com.project.with_study.domain.roommember.entity.RoomMember;
+import com.project.with_study.domain.participant.entity.Participant;
 import com.project.with_study.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -48,8 +48,13 @@ public class Member extends BaseEntity {
     @Embedded
     private Address address;
 
-    @OneToMany(mappedBy = "member")
+    @Comment("회원 권한")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Authority role = Authority.MEMBER;
+
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<RoomMember> roomMembers = new ArrayList<>();
+    private List<Participant> participants = new ArrayList<>();
 
 }
