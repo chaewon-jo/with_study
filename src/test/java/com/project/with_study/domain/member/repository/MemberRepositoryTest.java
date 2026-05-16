@@ -91,7 +91,7 @@ class MemberRepositoryTest {
                 createBaseMember().build()
         );
         Member duplicateMember = createBaseMember()
-                .phoneNumber("test@gmail.com")
+                .email("test@gmail.com")
                 .build();
 
         assertThatThrownBy(() ->

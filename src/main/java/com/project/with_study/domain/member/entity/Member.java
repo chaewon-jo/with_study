@@ -58,6 +58,7 @@ public class Member extends BaseEntity {
 
     @Comment("주소")
     @Embedded
+    @NotNull
     private Address address;
 
     @Comment("회원 권한")

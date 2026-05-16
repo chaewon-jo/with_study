@@ -45,8 +45,8 @@ public record MemberJoinRequest(
                         .build();
         }
 
-        public void confirmPassword(String password, String checkPassword) {
-                if (password.equals(checkPassword)) {
+        public void confirmPassword() {
+                if (!password.equals(checkPassword)) {
                    throw new MemberBusinessException(MemberErrorCode.PASSWORD_MISMATCH);
                 }
         }
