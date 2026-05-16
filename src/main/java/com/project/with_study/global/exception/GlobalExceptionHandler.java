@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * [C001] 엔티티, 파라미터 제약 조건 위반
+     * [C001] Bean Validation(엔티티, 파라미터 제약 조건 위반)
      */
     @ExceptionHandler(ConstraintViolationException.class)
     protected ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException e) {
