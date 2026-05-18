@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -33,8 +34,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 public class JwtTokenProvider {
 
     private final RedisTemplate<String, String> redisTemplate;
-
-    //무슨 역할?
+    
     @Value("${jwt.secret}")
     private String secret;
 
@@ -82,9 +82,6 @@ public class JwtTokenProvider {
         return null;
     }
 
-    /**
-     * JJWT 0.12.x 버전 규격에 맞춘 토큰 서명 및 만료 유효성 검증
-     */
     public boolean validateToken(final String token) {
         try {
             Jwts.parser()
@@ -113,36 +110,34 @@ public class JwtTokenProvider {
             throw new IllegalArgumentException("권한 정보가 없는 토큰입니다.");
         }
 
-        // 1. 클레임에서 권한(Role) 리스트 파싱
         final Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
-        // 2. Subject에서 유저 고유 ID 추출
         final String memberId = claims.getSubject();
 
-        // 3. MemberDetailService 조회 없이 메모리 상에서 즉시 UserDetails 구현체 조립
         final UserDetails userDetails = new User(memberId, "", authorities);
 
         return new UsernamePasswordAuthenticationToken(userDetails, accessToken, authorities);
     }
 
-    /**
-     * Redis를 활용한 무상태(Stateless) 강제 로그아웃 검증 (프로젝트 핵심 조건 충족)
-     */
     public boolean isTokenLoggedOut(final String token) {
-        final String logoutValue = redisTemplate.opsForValue().get(token);
-        if (StringUtils.hasText(logoutValue)) {
-            log.warn("로그아웃 처리된 폐기 토큰으로의 우회 접근이 감지되었습니다.");
+        try {
+            final String logoutValue = redisTemplate.opsForValue().get(token);
+
+            if (StringUtils.hasText(logoutValue)) {
+                log.warn("로그아웃 처리된 폐기 토큰으로의 우회 접근이 감지되었습니다.");
+                return true;
+            }
+
+            return false;
+        }catch (DataAccessException e) {
+            log.error("[Redis] 토큰 조회 실패", e);
             return true;
         }
-        return false;
     }
 
-    /**
-     * 유저 고유 식별자(PK) 추출
-     */
     public String getMemberPK(final String token) {
         return parseClaims(token).getSubject();
     }
@@ -154,14 +149,11 @@ public class JwtTokenProvider {
         return Math.max(0, expiration.getTime() - now);
     }
 
-    /**
-     * JJWT 0.12.x 사양의 Claims 직렬화 캡슐화 (구형 getBody 대치)
-     */
     private Claims parseClaims(final String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
-                .getPayload(); // 0.12.x 권장 표준 사양 적용
+                .getPayload();
     }
 }

@@ -126,7 +126,7 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
         log.error("handle AccessDeniedException", e);
 
-        ErrorCode errorCode = HANDLE_ACCESS_DENIED;
+        ErrorCode errorCode = ACCESS_DENIED;
         ErrorResponse response = ErrorResponse.of(
                 errorCode,
                 e.getMessage()
