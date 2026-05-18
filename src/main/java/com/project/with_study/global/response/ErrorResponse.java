@@ -1,6 +1,8 @@
 package com.project.with_study.global.response;
 
 import com.project.with_study.global.exception.errorcode.ErrorCode;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class ErrorResponse {
 
