@@ -1,9 +1,13 @@
 package com.project.with_study.global.config.security;
 
+import com.project.with_study.global.exception.BusinessException;
+import com.project.with_study.global.exception.errorcode.CommonErrorCode;
+import com.project.with_study.global.exception.errorcode.ErrorCode;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +45,10 @@ public class JwtTokenProvider {
     private SecretKey secretKey;
 
     private static final String AUTHORITIES_KEY = "auth";
-    private static final String BEARER_PREFIX = "Bearer ";
-    private static final String AUTHORIZATION_HEADER = "Authorization";
     public static final long ACCESS_TOKEN_EXPIRED_TIME = 1000 * 60 * 60 * 2; //2시간
-    public static final String REFRESH_TOKEN_INITIAL = "RT";
     public static final long REFRESH_TOKEN_EXPIRED_TIME = 1000 * 60 * 60 * 24 * 7; //7일
+    public static final String ACCESS_TOKEN_INITIAL = "AT";
+    public static final String REFRESH_TOKEN_INITIAL = "RT";
 
     @PostConstruct
     protected void init() {
@@ -61,7 +64,7 @@ public class JwtTokenProvider {
     public String createToken(final Long id, final String role) {
         final Date now = new Date();
 
-        String token = Jwts.builder()
+        return Jwts.builder()
                 .header()
                 .type("JWT")
                 .and()
@@ -72,10 +75,6 @@ public class JwtTokenProvider {
                 .expiration(new Date(now.getTime() + ACCESS_TOKEN_EXPIRED_TIME))
                 .signWith(this.secretKey, Jwts.SIG.HS256)
                 .compact();
-
-        log.info("[JWT TOKEN] 토큰 생성 완료");
-
-        return token;
     }
 
     /**
@@ -87,7 +86,7 @@ public class JwtTokenProvider {
     public String createRefreshToken(final Long id) {
         final Date now = new Date();
 
-        String token = Jwts.builder()
+        return Jwts.builder()
                 .header()
                 .type("JWT")
                 .and()
@@ -97,20 +96,14 @@ public class JwtTokenProvider {
                 .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRED_TIME))
                 .signWith(this.secretKey, Jwts.SIG.HS256)
                 .compact();
-
-        log.info("[JWT REFRESH TOKEN] 토큰 생성 완료");
-
-        return token;
     }
 
-    public String resolveToken(final HttpServletRequest request) {
-        final String bearerToken = request.getHeader(AUTHORIZATION);
+    public String resolveAccessToken(final HttpServletRequest request) {
+        return resolveCookie(request, ACCESS_TOKEN_INITIAL);
+    }
 
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            return bearerToken.substring(BEARER_PREFIX.length());
-        }
-
-        return null;
+    public String resolveRefreshToken(final HttpServletRequest request) {
+        return resolveCookie(request, REFRESH_TOKEN_INITIAL);
     }
 
     public boolean validateToken(final String token) {
@@ -119,17 +112,12 @@ public class JwtTokenProvider {
                     .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token);
+
             return true;
-        } catch (SignatureException e) {
-            log.error("Invalid JWT signature: {}", e.getMessage());
-        } catch (MalformedJwtException e) {
-            log.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            log.error("Expired JWT token: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            log.error("Unsupported JWT token: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.error("JWT claims string is empty: {}", e.getMessage());
+            log.warn("[JWT WARN] 만료된 토큰입니다.");
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("[JWT WARN] 유효하지 않은 토큰입니다: {}", e.getMessage());
         }
         return false;
     }
@@ -144,10 +132,9 @@ public class JwtTokenProvider {
         final Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
                         .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
+                        .toList();
 
         final String memberId = claims.getSubject();
-
         final UserDetails userDetails = new User(memberId, "", authorities);
 
         return new UsernamePasswordAuthenticationToken(userDetails, accessToken, authorities);
@@ -173,6 +160,16 @@ public class JwtTokenProvider {
         return parseClaims(token).getSubject();
     }
 
+    public String getMemberPKFromExpiredToken(final String token) {
+        try {
+            return parseClaims(token).getSubject();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getSubject(); //만료 토큰의 유저 ID 반환
+        } catch (Exception e) {
+            throw new BusinessException(CommonErrorCode.INVALID_TOKEN);
+        }
+    }
+
     public Long getExpiration(final String token) {
         final Date expiration = parseClaims(token).getExpiration();
         final long now = System.currentTimeMillis();
@@ -186,5 +183,16 @@ public class JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private String resolveCookie(final HttpServletRequest request, String cookieName) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> cookieName.equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElse(null);
     }
 }
