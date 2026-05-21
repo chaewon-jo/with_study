@@ -34,7 +34,7 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 public class JwtTokenProvider {
 
     private final RedisTemplate<String, String> redisTemplate;
-    
+
     @Value("${jwt.secret}")
     private String secret;
 
@@ -52,6 +52,12 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(this.secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 접속 토큰 생성 로직
+     *
+     * @param id   사용자 id
+     * @param role 사용자의 권한
+     */
     public String createToken(final Long id, final String role) {
         final Date now = new Date();
 
@@ -60,14 +66,39 @@ public class JwtTokenProvider {
                 .type("JWT")
                 .and()
                 .issuer("with_study.com")
-                .subject(String.valueOf(id))  // 유저 PK를 Subject에 바인딩
-                .claim(AUTHORITIES_KEY, role) // 유저 권한을 Claims에 바인딩
+                .subject(String.valueOf(id))
+                .claim(AUTHORITIES_KEY, role)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ACCESS_TOKEN_EXPIRED_TIME))
                 .signWith(this.secretKey, Jwts.SIG.HS256)
                 .compact();
 
         log.info("[JWT TOKEN] 토큰 생성 완료");
+
+        return token;
+    }
+
+    /**
+     * 리프레시 토큰 생성 로직
+     *
+     * @param id 사용자 id
+     * Redis에 저장된 사용자의 Access Token과 대조하는 토큰
+     */
+    public String createRefreshToken(final Long id) {
+        final Date now = new Date();
+
+        String token = Jwts.builder()
+                .header()
+                .type("JWT")
+                .and()
+                .issuer("with_study.com")
+                .subject(String.valueOf(id))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRED_TIME))
+                .signWith(this.secretKey, Jwts.SIG.HS256)
+                .compact();
+
+        log.info("[JWT REFRESH TOKEN] 토큰 생성 완료");
 
         return token;
     }
@@ -132,7 +163,7 @@ public class JwtTokenProvider {
             }
 
             return false;
-        }catch (DataAccessException e) {
+        } catch (DataAccessException e) {
             log.error("[Redis] 토큰 조회 실패", e);
             return true;
         }
