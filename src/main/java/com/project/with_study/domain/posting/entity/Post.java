@@ -16,7 +16,7 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLDelete(sql = "UPDATE reply SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLDelete(sql = "UPDATE post SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class Post extends BaseAuthEntity {
     @Id
@@ -40,7 +40,9 @@ public class Post extends BaseAuthEntity {
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @NotEmpty
+    @Column(nullable = false)
+    @NotNull
+    @Builder.Default
     private PostStatus status = PostStatus.OPEN;
 
 }
