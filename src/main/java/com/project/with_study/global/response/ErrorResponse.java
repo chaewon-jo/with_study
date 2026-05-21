@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -28,6 +29,7 @@ public class ErrorResponse {
         this.code = errorCode.getCode();
         this.message = errorCode.getMessage();
         this.timestamp = LocalDateTime.now();
+        this.errors = new ArrayList<>();
     }
 
     private ErrorResponse(ErrorCode errorCode, List<FieldError> errors) {
@@ -43,6 +45,7 @@ public class ErrorResponse {
         this.code = errorCode.getCode();
         this.message = message;
         this.timestamp = LocalDateTime.now();
+        this.errors = new ArrayList<>();
     }
 
     private ErrorResponse(ErrorCode errorCode, List<FieldError> errors, String message) {
