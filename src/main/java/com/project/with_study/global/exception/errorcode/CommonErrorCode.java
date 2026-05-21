@@ -16,7 +16,9 @@ public enum CommonErrorCode implements ErrorCode{
 
     // Security
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "A001", "인증되지 않은 사용자입니다.", "로그인 후 다시 시도해주세요."),
-    ACCESS_DENIED(HttpStatus.FORBIDDEN, "A002", "권한이 없습니다.", "해당 리소스에 접근할 권한이 없습니다.");
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "A002", "권한이 없습니다.", "해당 리소스에 접근할 권한이 없습니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A003", "유효하지 않은 토큰입니다.", "토큰이 만료되었거나 변조되었습니다."),
+    TOKEN_MISMATCH(HttpStatus.UNAUTHORIZED, "A004", "토큰 정보가 일치하지 않습니다.", "세션이 만료되었거나 변경되었습니다. 다시 로그인해주세요.");
 
     private final HttpStatus httpStatus;
     private final String code;
