@@ -85,7 +85,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(WHITE_LIST).permitAll();
-                    auth.requestMatchers("/docs/*", "/actuator/*").hasRole("ADMIN");
+                    auth.requestMatchers("/docs/*", "/actuator/*").hasAuthority("ADMIN");
 
                     if (!Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
                         auth.requestMatchers(PathRequest.toH2Console()).permitAll();

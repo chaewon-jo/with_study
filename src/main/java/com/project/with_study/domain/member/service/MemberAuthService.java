@@ -120,7 +120,7 @@ public class MemberAuthService {
 
     private Member findById(String memberId) {
         return memberRepository.findById(Long.parseLong(memberId))
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 멤버입니다."));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     private void validateJoinMember(MemberJoinRequest request) {
@@ -164,6 +164,7 @@ public class MemberAuthService {
     /**
      * AT, RT 발급
      * Redis에 RT 적재 (RT: {memberId}, {refreshToken})
+     *
      * @param member
      * @param redisKey
      * @param response - 쿠키 저장 용 HttpServletResponse

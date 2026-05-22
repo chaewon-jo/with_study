@@ -60,7 +60,7 @@ class MemberRepositoryTest {
                 .build();
 
         assertThatThrownBy(() ->
-                memberRepository.save(duplicateMember))
+                memberRepository.saveAndFlush(duplicateMember))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -95,7 +95,7 @@ class MemberRepositoryTest {
                 .build();
 
         assertThatThrownBy(() ->
-                memberRepository.save(duplicateMember))
+                memberRepository.saveAndFlush(duplicateMember))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

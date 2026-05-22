@@ -160,12 +160,21 @@ public class JwtTokenProvider {
         return parseClaims(token).getSubject();
     }
 
+    /**
+     * 만료 토큰을 포함한 모든 토큰으로부터 유저 PK 조회
+     * @param token
+     * @return - 유저의 PK 반환
+     * @exception ExpiredJwtException - ExpiredJwtException 발생 시에도 유저의 PK 반환을 보장
+     * @throws BusinessException - 그 외 예외 발생 유효하지 않은 토큰에 대한 에러코드 발생
+     */
     public String getMemberPKFromExpiredToken(final String token) {
         try {
-            return parseClaims(token).getSubject();
+            return getMemberPK(token);
         } catch (ExpiredJwtException e) {
-            return e.getClaims().getSubject(); //만료 토큰의 유저 ID 반환
+            return e.getClaims().getSubject();
         } catch (Exception e) {
+            log.warn("[JWT] 토큰에서 사용자 ID 추출을 실패했습니다.", e);
+
             throw new BusinessException(CommonErrorCode.INVALID_TOKEN);
         }
     }

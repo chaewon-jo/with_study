@@ -28,7 +28,7 @@ public class MemberAuthController {
         memberAuthService.join(requestDto);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequestUri()
-                .replacePath("/api/member/{id}")
+                .replacePath("/api/member/{email}")
                 .buildAndExpand(requestDto.email())
                 .toUri();
 

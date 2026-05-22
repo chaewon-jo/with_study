@@ -36,7 +36,7 @@ public class Member extends BaseEntity {
 
     @Comment("닉네임")
     @NotBlank
-    @Size(max = 16)
+    @Size(min = 2, max = 16)
     @Column(length = 16, nullable = false)
     private String nickname;
 
