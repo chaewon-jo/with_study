@@ -48,20 +48,10 @@ public class MemberAuthService {
             throw new BusinessException(MemberErrorCode.LOGIN_MISMATCH);
         }
 
-        String accessToken = jwtTokenProvider.createToken(member.getId(), member.getAuthority().name());
-        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
-
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_INITIAL + ": " + member.getId(),
-                refreshToken,
-                REFRESH_TOKEN_EXPIRED_TIME,
-                TimeUnit.MILLISECONDS
-        );
+        String redisKey = REFRESH_TOKEN_INITIAL + ": " + member.getId();
+        createAndStoreTokens(member, redisKey, response);
 
         log.info("[LOGIN]: 유저 ID: {}가 로그인하였습니다.", member.getId());
-
-        setCookie(ACCESS_TOKEN_INITIAL, accessToken, ACCESS_TOKEN_EXPIRED_TIME, response);
-        setCookie(REFRESH_TOKEN_INITIAL, refreshToken, REFRESH_TOKEN_EXPIRED_TIME, response);
     }
 
     @Transactional
@@ -121,23 +111,16 @@ public class MemberAuthService {
             throw new BusinessException(CommonErrorCode.TOKEN_MISMATCH);
         }
 
-        Member member = memberRepository.findById(Long.parseLong(memberId))
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 멤버입니다."));
+        Member member = findById(memberId);
 
-        String newAccessToken = jwtTokenProvider.createToken(member.getId(), member.getAuthority().name());
-        String newRefreshToken = jwtTokenProvider.createRefreshToken(member.getId());
-
-        redisTemplate.opsForValue().set(
-                redisKey,
-                newRefreshToken,
-                REFRESH_TOKEN_EXPIRED_TIME,
-                TimeUnit.MILLISECONDS
-        );
+        createAndStoreTokens(member, redisKey, response);
 
         log.info("[REISSUE]: 유저 ID: {} 의 토큰이 재발급되었습니다.", memberId);
+    }
 
-        setCookie(ACCESS_TOKEN_INITIAL, newAccessToken, ACCESS_TOKEN_EXPIRED_TIME, response);
-        setCookie(REFRESH_TOKEN_INITIAL, newRefreshToken, REFRESH_TOKEN_EXPIRED_TIME, response);
+    private Member findById(String memberId) {
+        return memberRepository.findById(Long.parseLong(memberId))
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 멤버입니다."));
     }
 
     private void validateJoinMember(MemberJoinRequest request) {
@@ -176,6 +159,28 @@ public class MemberAuthService {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    /**
+     * AT, RT 발급
+     * Redis에 RT 적재 (RT: {memberId}, {refreshToken})
+     * @param member
+     * @param redisKey
+     * @param response - 쿠키 저장 용 HttpServletResponse
+     */
+    private void createAndStoreTokens(Member member, String redisKey, HttpServletResponse response) {
+        String accessToken = jwtTokenProvider.createToken(member.getId(), member.getAuthority().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
+
+        redisTemplate.opsForValue().set(
+                redisKey,
+                refreshToken,
+                REFRESH_TOKEN_EXPIRED_TIME,
+                TimeUnit.MILLISECONDS
+        );
+
+        setCookie(ACCESS_TOKEN_INITIAL, accessToken, ACCESS_TOKEN_EXPIRED_TIME, response);
+        setCookie(REFRESH_TOKEN_INITIAL, refreshToken, REFRESH_TOKEN_EXPIRED_TIME, response);
     }
 }
 
