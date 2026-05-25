@@ -1,12 +1,10 @@
 package com.project.with_study.domain.member.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.with_study.domain.member.dto.AddressDto;
 import com.project.with_study.domain.member.dto.request.MemberJoinRequest;
 import com.project.with_study.domain.member.dto.request.MemberLoginRequest;
 import com.project.with_study.domain.member.service.MemberAuthService;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
