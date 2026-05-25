@@ -1,9 +1,12 @@
 package com.project.with_study.domain.member.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.with_study.domain.member.dto.AddressDto;
 import com.project.with_study.domain.member.dto.request.MemberJoinRequest;
+import com.project.with_study.domain.member.dto.request.MemberLoginRequest;
 import com.project.with_study.domain.member.service.MemberAuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -67,6 +70,59 @@ class MemberAuthControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @DisplayName("로그인을 진행한다.")
+    @Test
+    void login_success() throws Exception{
+        MemberLoginRequest request = createBaseMemberLoginDto().build();
+
+        doNothing().when(memberAuthService).login(any(MemberLoginRequest.class), any());
+
+        mockMvc.perform(post("/api/member/login")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("로그인이 완료되었습니다."))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @DisplayName("로그인 실패 - DTO 제약값 위반 시 400 에러 발생")
+    @ParameterizedTest
+    @MethodSource("invalidLoginRequest")
+    void login_falied_by_boundary_validation(String description, MemberLoginRequest requestDto) throws Exception {
+        mockMvc.perform(post("/api/member/login")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("로그아웃을 진행한다.")
+    @Test
+    void logout_success() throws Exception{
+        doNothing().when(memberAuthService).logout(any(), any());
+
+        mockMvc.perform(post("/api/member/logout"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("로그아웃이 완료되었습니다."))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
+    @DisplayName("토큰 재발급을 진행한다.")
+    @Test
+    void reissue_success() throws Exception{
+        doNothing().when(memberAuthService).reissue(any(), any());
+
+        mockMvc.perform(post("/api/member/reissue"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("재발급이 완료되었습니다."))
+                .andExpect(jsonPath("$.data").isEmpty());
+    }
+
     private static Stream<Arguments> invalidJoinRequest() {
         return Stream.of(
                 Arguments.of("name 공백", createBaseMemberJoinDto().name(" ").build()),
@@ -106,6 +162,15 @@ class MemberAuthControllerTest {
         );
     }
 
+    private static Stream<Arguments> invalidLoginRequest(){
+        return Stream.of(
+                Arguments.of("email 공백", createBaseMemberLoginDto().email(" ").build()),
+                Arguments.of("email 형식 오류", createBaseMemberLoginDto().email("abcd1234").build()),
+                Arguments.of("password 공백", createBaseMemberLoginDto().password(" ").build()),
+                Arguments.of("password 형식 오류", createBaseMemberLoginDto().password("test1234").build())
+        );
+    }
+
     private static MemberJoinRequest.MemberJoinRequestBuilder createBaseMemberJoinDto() {
         return MemberJoinRequest.builder()
                 .name("홍길동")
@@ -121,4 +186,10 @@ class MemberAuthControllerTest {
                 .email("abcd1234@gmail.com");
     }
 
+
+    private static MemberLoginRequest.MemberLoginRequestBuilder createBaseMemberLoginDto() {
+        return MemberLoginRequest.builder()
+                .email("abcd1234@gmail.com")
+                .password("test1234!");
+    }
 }
