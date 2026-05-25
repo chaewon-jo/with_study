@@ -132,7 +132,7 @@ public class MemberAuthService {
             throw new BusinessException(MemberErrorCode.DUPLICATE_PHONENUMBER);
         }
 
-        request.checkPassword();
+        request.confirmPassword();
     }
 
     private void setCookie(String tokenInitial, String token, long expireTime, HttpServletResponse response) {
