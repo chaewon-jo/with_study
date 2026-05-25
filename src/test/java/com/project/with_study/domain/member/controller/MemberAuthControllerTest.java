@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.with_study.domain.member.dto.AddressDto;
 import com.project.with_study.domain.member.dto.request.MemberJoinRequest;
 import com.project.with_study.domain.member.dto.request.MemberLoginRequest;
+import com.project.with_study.domain.member.exception.errorcode.MemberErrorCode;
 import com.project.with_study.domain.member.service.MemberAuthService;
+import com.project.with_study.global.exception.errorcode.CommonErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,6 +22,7 @@ import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -65,7 +68,11 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/member/signup")
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").exists())
+                .andExpect(jsonPath("$.message").value(CommonErrorCode.INVALID_INPUT_VALUE.getMessage()));
+        verifyNoInteractions(memberAuthService);
     }
 
     @DisplayName("로그인을 진행한다.")
@@ -92,7 +99,11 @@ class MemberAuthControllerTest {
         mockMvc.perform(post("/api/member/login")
                         .contentType(APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").exists())
+                .andExpect(jsonPath("$.message").value(CommonErrorCode.INVALID_INPUT_VALUE.getMessage()));
+        verifyNoInteractions(memberAuthService);
     }
 
     @DisplayName("로그아웃을 진행한다.")

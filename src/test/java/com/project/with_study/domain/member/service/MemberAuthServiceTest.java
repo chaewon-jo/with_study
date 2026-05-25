@@ -12,11 +12,11 @@ import com.project.with_study.global.config.security.JwtTokenProvider;
 import com.project.with_study.global.exception.BusinessException;
 import com.project.with_study.global.exception.errorcode.CommonErrorCode;
 import jakarta.servlet.http.Cookie;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -67,13 +67,18 @@ class MemberAuthServiceTest {
         MemberJoinRequest requestDto = createBaseMemberJoinDto().build();
         when(memberRepository.existsByEmail(requestDto.email())).thenReturn(false);
         when(memberRepository.existsByPhoneNumber(requestDto.phoneNumber())).thenReturn(false);
+        when(passwordEncoder.encode(requestDto.password())).thenReturn("encode_password");
 
         Member mockMember = createBaseMember().build();
         when(memberRepository.save(any(Member.class))).thenReturn(mockMember);
 
         memberAuthService.join(requestDto);
 
-        verify(memberRepository, times(1)).save(any(Member.class));
+        ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class); // ArgumentCaptor: Member 객체 캡쳐용
+        verify(memberRepository, times(1)).save(captor.capture()); //save() 호출 시 사용된 mockMember 캡쳐
+        verify(passwordEncoder, times(1)).encode(requestDto.password());
+        assertThat(captor.getValue().getEmail()).isEqualTo(requestDto.email());
+        assertThat(captor.getValue().getPassword()).isEqualTo("encode_password");
     }
 
     @Test
@@ -82,9 +87,9 @@ class MemberAuthServiceTest {
         MemberJoinRequest requestDto = createBaseMemberJoinDto().build();
         when(memberRepository.existsByEmail(requestDto.email())).thenReturn(true);
 
-        Assertions.assertThatThrownBy(
-                        () -> memberAuthService.join(requestDto)
-                ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(
+                () -> memberAuthService.join(requestDto)
+        ).isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.DUPLICATE_EMAIL.getMessage());
     }
 
@@ -94,10 +99,25 @@ class MemberAuthServiceTest {
         MemberJoinRequest requestDto = createBaseMemberJoinDto().build();
         when(memberRepository.existsByPhoneNumber(requestDto.phoneNumber())).thenReturn(true);
 
-        Assertions.assertThatThrownBy(
-                        () -> memberAuthService.join(requestDto)
-                ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(
+                () -> memberAuthService.join(requestDto)
+        ).isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.DUPLICATE_PHONENUMBER.getMessage());
+    }
+
+    @Test
+    @DisplayName("회원가입 실패 - 비밀번호와 비밀번호 확인의 불일치")
+    void join_failed_by_password_confirm_mismatch() {
+        MemberJoinRequest requestDto = createBaseMemberJoinDto()
+                .checkPassword("mismatch1234!")
+                .build();
+        when(memberRepository.existsByEmail(requestDto.email())).thenReturn(false);
+        when(memberRepository.existsByPhoneNumber(requestDto.phoneNumber())).thenReturn(false);
+
+        assertThatThrownBy(
+                () -> memberAuthService.join(requestDto)
+        ).isInstanceOf(BusinessException.class)
+                .hasMessage(MemberErrorCode.PASSWORD_MISMATCH.getMessage());
     }
 
     @Test
@@ -248,6 +268,28 @@ class MemberAuthServiceTest {
         assertThatThrownBy(() -> memberAuthService.reissue(request, response))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CommonErrorCode.TOKEN_MISMATCH.getMessage());
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패 - RT가 없으면 INVALID_TOKEN")
+    void reissue_fail_noRefreshTokenResolve() {
+        when(jwtTokenProvider.resolveRefreshToken(request)).thenReturn(null);
+
+        assertThatThrownBy(() -> memberAuthService.reissue(request, response))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패 - RT가 유효하지 않으면 INVALID_TOKEN")
+    void reissue_fail_invalidRefreshToken() {
+        request.setCookies(new Cookie(JwtTokenProvider.REFRESH_TOKEN_INITIAL, "invalid_rt"));
+        when(jwtTokenProvider.resolveRefreshToken(request)).thenReturn("invalid_rt");
+        when(jwtTokenProvider.validateToken("invalid_rt")).thenReturn(false);
+
+        assertThatThrownBy(() -> memberAuthService.reissue(request, response))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
     }
 
     private static MemberJoinRequest.MemberJoinRequestBuilder createBaseMemberJoinDto() {
