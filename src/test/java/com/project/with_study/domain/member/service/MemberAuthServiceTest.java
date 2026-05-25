@@ -87,9 +87,8 @@ class MemberAuthServiceTest {
         MemberJoinRequest requestDto = createBaseMemberJoinDto().build();
         when(memberRepository.existsByEmail(requestDto.email())).thenReturn(true);
 
-        assertThatThrownBy(
-                () -> memberAuthService.join(requestDto)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.join(requestDto))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.DUPLICATE_EMAIL.getMessage());
     }
 
@@ -99,9 +98,8 @@ class MemberAuthServiceTest {
         MemberJoinRequest requestDto = createBaseMemberJoinDto().build();
         when(memberRepository.existsByPhoneNumber(requestDto.phoneNumber())).thenReturn(true);
 
-        assertThatThrownBy(
-                () -> memberAuthService.join(requestDto)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.join(requestDto))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.DUPLICATE_PHONENUMBER.getMessage());
     }
 
@@ -114,9 +112,8 @@ class MemberAuthServiceTest {
         when(memberRepository.existsByEmail(requestDto.email())).thenReturn(false);
         when(memberRepository.existsByPhoneNumber(requestDto.phoneNumber())).thenReturn(false);
 
-        assertThatThrownBy(
-                () -> memberAuthService.join(requestDto)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.join(requestDto))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.PASSWORD_MISMATCH.getMessage());
     }
 
@@ -158,9 +155,8 @@ class MemberAuthServiceTest {
 
         when(memberRepository.findByEmail(requestDto.email())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(
-                () -> memberAuthService.login(requestDto, response)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.login(requestDto, response))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.LOGIN_MISMATCH.getMessage());
     }
 
@@ -173,9 +169,8 @@ class MemberAuthServiceTest {
         when(memberRepository.findByEmail(requestDto.email())).thenReturn(Optional.of(member));
         when(passwordEncoder.matches(requestDto.password(), member.getPassword())).thenReturn(false);
 
-        assertThatThrownBy(
-                () -> memberAuthService.login(requestDto, response)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.login(requestDto, response))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(MemberErrorCode.LOGIN_MISMATCH.getMessage());
     }
 
@@ -220,9 +215,8 @@ class MemberAuthServiceTest {
         request.setCookies(new Cookie(JwtTokenProvider.ACCESS_TOKEN_INITIAL, "expired_token"));
         when(jwtTokenProvider.resolveAccessToken(request)).thenReturn(null);
 
-        assertThatThrownBy(
-                () -> memberAuthService.logout(request, response)
-        ).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> memberAuthService.logout(request, response))
+                .isInstanceOf(BusinessException.class)
                 .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
     }
 
