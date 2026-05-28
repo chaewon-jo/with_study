@@ -262,6 +262,7 @@ class MemberAuthServiceTest {
         assertThatThrownBy(() -> memberAuthService.reissue(request, response))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CommonErrorCode.TOKEN_MISMATCH.getMessage());
+        verifyNoInteractions(redisTemplate, memberRepository);
     }
 
     @Test
@@ -272,6 +273,8 @@ class MemberAuthServiceTest {
         assertThatThrownBy(() -> memberAuthService.reissue(request, response))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
+
+        verifyNoInteractions(redisTemplate, memberRepository);
     }
 
     @Test
@@ -284,6 +287,7 @@ class MemberAuthServiceTest {
         assertThatThrownBy(() -> memberAuthService.reissue(request, response))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
+        verifyNoInteractions(redisTemplate, memberRepository);
     }
 
     private static MemberJoinRequest.MemberJoinRequestBuilder createBaseMemberJoinDto() {
