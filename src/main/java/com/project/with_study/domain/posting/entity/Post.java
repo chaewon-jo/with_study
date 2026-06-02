@@ -6,6 +6,7 @@ import com.project.with_study.global.entity.BaseAuthEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.Comment;
 import org.hibernate.annotations.SQLDelete;
@@ -31,12 +32,13 @@ public class Post extends BaseAuthEntity {
 
     @Comment("제목")
     @Column(nullable = false)
-    @NotEmpty
+    @Size(max = 50, message = "제목은 50자를 초과할 수 없습니다.")
+    @NotEmpty(message = "제목은 필수입니다.")
     private String title;
 
     @Comment("내용")
     @Column(nullable = false, columnDefinition = "TEXT")
-    @NotEmpty
+    @NotEmpty(message = "내용은 필수입니다.")
     private String content;
 
     @Enumerated(EnumType.STRING)
