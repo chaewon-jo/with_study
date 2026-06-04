@@ -4,7 +4,10 @@ import com.project.with_study.domain.posting.PostStatus;
 import com.project.with_study.domain.posting.dto.SearchCriteria;
 import com.project.with_study.domain.posting.dto.request.PostSearchCondition;
 import com.project.with_study.domain.posting.entity.Post;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Set;
 
 import static com.project.with_study.domain.member.entity.QMember.member;
 import static com.project.with_study.domain.posting.entity.QPost.post;
@@ -34,7 +38,7 @@ public class PostSearchRepository implements SearchRepository<Post, PostSearchCo
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
-                .orderBy(post.id.desc())
+                .orderBy(toOrderSpecifier())
                 .fetch();
 
         Long total = jpaQueryFactory
@@ -69,7 +73,16 @@ public class PostSearchRepository implements SearchRepository<Post, PostSearchCo
             case CONTENT -> post.content.contains(keyword);
             case NICKNAME -> post.member.nickname.contains(keyword);
             case TITLE -> post.title.contains(keyword);
-            case TITLE_AND_CONTENT -> post.content.contains(keyword).or(post.content.contains(keyword));
+            case TITLE_AND_CONTENT -> post.title.contains(keyword).or(post.content.contains(keyword));
         };
+    }
+
+    /**
+     * 기본적으로 최신순 조회
+     *
+     * @return OrderSpecifier - QeuryDsl의 정렬 표현식
+     */
+    private OrderSpecifier<?>[] toOrderSpecifier() {
+            return new OrderSpecifier[]{post.createdAt.desc()};
     }
 }

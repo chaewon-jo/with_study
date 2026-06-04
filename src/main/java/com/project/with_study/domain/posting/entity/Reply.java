@@ -49,6 +49,7 @@ public class Reply extends BaseAuthEntity {
 
     @Comment("자식 댓글들")
     @OneToMany(mappedBy = "parent")
+    @Builder.Default
     private List<Reply> children = new ArrayList<>();
 
 }
