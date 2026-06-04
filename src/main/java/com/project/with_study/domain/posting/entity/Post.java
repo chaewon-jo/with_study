@@ -47,4 +47,9 @@ public class Post extends BaseAuthEntity {
     @Builder.Default
     private PostStatus status = PostStatus.OPEN;
 
+    @Comment("조회수")
+    @Column(nullable = false)
+    @Builder.Default
+    private Long viewCount = 0L;
+
 }
