@@ -18,18 +18,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return request.getRequestURI().equals("/api/member/reissue");
+    }
+
+    @Override
     protected void doFilterInternal(final HttpServletRequest request, final HttpServletResponse response, final FilterChain filterChain) throws ServletException, IOException {
-        // Request Header에서 토큰 추출
-        final String token = jwtTokenProvider.resolveToken(request);
+        final String accessToken = jwtTokenProvider.resolveAccessToken(request);
 
-        // 토큰이 유효하고, Redis Blacklist에 등록되지 않은 경우에만 인증 처리
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+        if (StringUtils.hasText(accessToken) && jwtTokenProvider.validateToken(accessToken)) {
 
-            // Redis를 활용한 로그아웃 여부 체킹 로직 (JwtTokenProvider 내부에서 RedisTemplate 등으로 검증)
-            final boolean isLoggedOut = jwtTokenProvider.isTokenLoggedOut(token);
+            final boolean isLoggedOut = jwtTokenProvider.isTokenLoggedOut(accessToken);
 
             if (!isLoggedOut) {
-                final Authentication authentication = jwtTokenProvider.getAuthentication(token);
+                final Authentication authentication = jwtTokenProvider.getAuthentication(accessToken);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }

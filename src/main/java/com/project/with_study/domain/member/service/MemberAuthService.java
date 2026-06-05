@@ -1,0 +1,188 @@
+package com.project.with_study.domain.member.service;
+
+import com.project.with_study.domain.member.dto.request.MemberJoinRequest;
+import com.project.with_study.domain.member.dto.request.MemberLoginRequest;
+import com.project.with_study.domain.member.entity.Member;
+import com.project.with_study.domain.member.exception.MemberBusinessException;
+import com.project.with_study.domain.member.exception.errorcode.MemberErrorCode;
+import com.project.with_study.domain.member.repository.MemberRepository;
+import com.project.with_study.global.config.security.JwtTokenProvider;
+import com.project.with_study.global.exception.BusinessException;
+import com.project.with_study.global.exception.errorcode.CommonErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static com.project.with_study.global.config.security.JwtTokenProvider.*;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class MemberAuthService {
+
+    private final MemberRepository memberRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    @Transactional
+    public void login(MemberLoginRequest request, HttpServletResponse response) {
+        String email = request.email();
+        String password = request.password();
+
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new MemberBusinessException(MemberErrorCode.LOGIN_MISMATCH));
+
+        if (!passwordEncoder.matches(password, member.getPassword())) {
+            throw new MemberBusinessException(MemberErrorCode.LOGIN_MISMATCH);
+        }
+
+        String redisKey = REFRESH_TOKEN_INITIAL + ": " + member.getId();
+        createAndStoreTokens(member, redisKey, response);
+
+        log.info("[LOGIN]: 유저 ID: {}가 로그인하였습니다.", member.getId());
+    }
+
+    @Transactional
+    public void join(MemberJoinRequest request) {
+        validateJoinMember(request);
+
+        Member member = request.toMember(passwordEncoder);
+        memberRepository.save(member);
+    }
+
+    @Transactional
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        String accessToken = jwtTokenProvider.resolveAccessToken(request);
+
+        if (accessToken == null) {
+            throw new BusinessException(CommonErrorCode.INVALID_TOKEN);
+        }
+
+        String memberId = jwtTokenProvider.getMemberPKFromExpiredToken(accessToken);
+        redisTemplate.delete(REFRESH_TOKEN_INITIAL + ": " + memberId);
+
+        if (jwtTokenProvider.validateToken(accessToken)) {
+            Long expiration = jwtTokenProvider.getExpiration(accessToken);
+            redisTemplate.opsForValue().set(
+                    accessToken,
+                    "logout",
+                    expiration,
+                    TimeUnit.MILLISECONDS
+            );
+
+            log.info("[LOGOUT] 유저 ID {} 가 로그아웃하였습니다.", memberId);
+
+        } else {
+            log.info("[LOGOUT] 유저 ID {}의 RT를 삭제했습니다.", memberId);
+        }
+
+        deleteCookie(ACCESS_TOKEN_INITIAL, response);
+        deleteCookie(REFRESH_TOKEN_INITIAL, response);
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Transactional
+    public void reissue(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = jwtTokenProvider.resolveRefreshToken(request);
+
+        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+            throw new BusinessException(CommonErrorCode.INVALID_TOKEN);
+        }
+
+        String memberId = jwtTokenProvider.getMemberPK(refreshToken);
+
+        String redisKey = REFRESH_TOKEN_INITIAL + ": " + memberId;
+        String savedRefreshToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
+            throw new BusinessException(CommonErrorCode.TOKEN_MISMATCH);
+        }
+
+        Member member = findById(memberId);
+
+        createAndStoreTokens(member, redisKey, response);
+
+        log.info("[REISSUE]: 유저 ID: {} 의 토큰이 재발급되었습니다.", memberId);
+    }
+
+    private Member findById(String memberId) {
+        return memberRepository.findById(Long.parseLong(memberId))
+                .orElseThrow(() -> new MemberBusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    private void validateJoinMember(MemberJoinRequest request) {
+        if (memberRepository.existsByEmail(request.email())) {
+            throw new MemberBusinessException(MemberErrorCode.DUPLICATE_EMAIL);
+        }
+
+        if (memberRepository.existsByPhoneNumber(request.phoneNumber())) {
+            throw new MemberBusinessException(MemberErrorCode.DUPLICATE_PHONENUMBER);
+        }
+
+        request.confirmPassword();
+    }
+
+    private void setCookie(String tokenInitial, String token, long expireTime, HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie
+                .from(tokenInitial, token)
+                .path("/")
+                .httpOnly(true)
+                .secure(true)
+                .maxAge(Duration.ofMillis(expireTime))
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void deleteCookie(String tokenInitial, HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie
+                .from(tokenInitial, "")
+                .path("/")
+                .httpOnly(true)
+                .secure(true)
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    /**
+     * AT, RT 발급
+     * Redis에 RT 적재 (RT: {memberId}, {refreshToken})
+     *
+     * @param member
+     * @param redisKey
+     * @param response - 쿠키 저장 용 HttpServletResponse
+     */
+    private void createAndStoreTokens(Member member, String redisKey, HttpServletResponse response) {
+        String accessToken = jwtTokenProvider.createToken(member.getId(), member.getAuthority().name());
+        String refreshToken = jwtTokenProvider.createRefreshToken(member.getId());
+
+        redisTemplate.opsForValue().set(
+                redisKey,
+                refreshToken,
+                REFRESH_TOKEN_EXPIRED_TIME,
+                TimeUnit.MILLISECONDS
+        );
+
+        setCookie(ACCESS_TOKEN_INITIAL, accessToken, ACCESS_TOKEN_EXPIRED_TIME, response);
+        setCookie(REFRESH_TOKEN_INITIAL, refreshToken, REFRESH_TOKEN_EXPIRED_TIME, response);
+    }
+}
+
