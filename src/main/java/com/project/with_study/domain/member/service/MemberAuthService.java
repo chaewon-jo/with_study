@@ -3,6 +3,7 @@ package com.project.with_study.domain.member.service;
 import com.project.with_study.domain.member.dto.request.MemberJoinRequest;
 import com.project.with_study.domain.member.dto.request.MemberLoginRequest;
 import com.project.with_study.domain.member.entity.Member;
+import com.project.with_study.domain.member.exception.MemberBusinessException;
 import com.project.with_study.domain.member.exception.errorcode.MemberErrorCode;
 import com.project.with_study.domain.member.repository.MemberRepository;
 import com.project.with_study.global.config.security.JwtTokenProvider;
@@ -42,10 +43,10 @@ public class MemberAuthService {
         String password = request.password();
 
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_MISMATCH));
+                .orElseThrow(() -> new MemberBusinessException(MemberErrorCode.LOGIN_MISMATCH));
 
         if (!passwordEncoder.matches(password, member.getPassword())) {
-            throw new BusinessException(MemberErrorCode.LOGIN_MISMATCH);
+            throw new MemberBusinessException(MemberErrorCode.LOGIN_MISMATCH);
         }
 
         String redisKey = REFRESH_TOKEN_INITIAL + ": " + member.getId();
@@ -120,16 +121,16 @@ public class MemberAuthService {
 
     private Member findById(String memberId) {
         return memberRepository.findById(Long.parseLong(memberId))
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new MemberBusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     private void validateJoinMember(MemberJoinRequest request) {
         if (memberRepository.existsByEmail(request.email())) {
-            throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
+            throw new MemberBusinessException(MemberErrorCode.DUPLICATE_EMAIL);
         }
 
         if (memberRepository.existsByPhoneNumber(request.phoneNumber())) {
-            throw new BusinessException(MemberErrorCode.DUPLICATE_PHONENUMBER);
+            throw new MemberBusinessException(MemberErrorCode.DUPLICATE_PHONENUMBER);
         }
 
         request.confirmPassword();
