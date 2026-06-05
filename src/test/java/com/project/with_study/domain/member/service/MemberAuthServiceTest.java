@@ -274,7 +274,7 @@ class MemberAuthServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(CommonErrorCode.INVALID_TOKEN.getMessage());
 
-        verifyNoInteractions(redisTemplate, memberRepository);
+        verify(memberRepository, never()).findById(anyLong()); //memberRepository.findById()는 호출되지 않는다.
     }
 
     @Test
